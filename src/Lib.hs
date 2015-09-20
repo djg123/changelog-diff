@@ -5,6 +5,7 @@ module Lib
 
 import           Control.Applicative ((<$>), (<*>), pure)
 import           Control.Arrow ((***), (&&&))
+import           Data.List (nub)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import           Debug.Trace
@@ -43,8 +44,9 @@ data FunctionStatus a = Deleted a | ChangedType {old :: a
                          
  
 
---buildChangelog' :: [FunctionSignature] -> [FunctionSignature] -> Changelog
-buildChangelog' new old = Changelog added' deleted' changeType' unchanged'
+buildChangelog' new old = Changelog added' deleted' 
+                                           (nub changeType') 
+                                           (nub unchanged')
   where 
     (added', deleted', changeType', unchanged') = foldr step ([], [], [], []) 
                                                              (oldInNew ++ newInOld)
@@ -77,41 +79,11 @@ buildChangelog' new old = Changelog added' deleted' changeType' unchanged'
     makeMap = M.fromList . map (\(a,b,c) -> ((a, b), c))
     [newM, oldM] = map makeMap [new, old]
 
---buildChangelog :: [FunctionSignature] -> [FunctionSignature] -> Changelog
---buildChangelog new old = Changelog (S.fromList added') (S.fromList deleted') (S.fromList changedType')
-  --where
-    {-(added', deleted', changedType') = foldr chooseBucket ([], [], []) (old ++ new)
-                 
-    chooseBucket sig@(m, n, t) (as, ds, cs)
-      | (m, n) `S.member` bothSet = case version sig of
-                                       NewVersion -> (as, ds, cs)
-                                       OldVersion -> (as, ds, sig:cs)
-                                       BothVersions -> undefined
-
-      | (m, n) `S.member` newSetNameModule  = (sig:as, ds, cs)
-      | (m, n) `S.member` oldSetNameModule  = (as, sig:ds, cs)
-    newSetNameModule = S.fromList $ map sndThree new
-    oldSetNameModule = S.fromList $ map sndThree old
-    bothSet = newSetNameModule `S.intersection` oldSetNameModule
-    newSetSig = S.fromList new
-    oldSetSig = S.fromList old
-    version x = if x `S.member` newSetSig
-                then if x `S.member` oldSetSig
-                        then BothVersions
-                        else NewVersion
-                else if x `S.member` oldSetSig
-                     then OldVersion
-                     else error $ show x ++ " not showing up in either set."
-    sndThree (a, b, c) = (a, b)-}
-
-
-
 
 
 processResults :: [(H.Score, H.Result)] ->  [(ModuleName, FunctionName, Type)]
 processResults = map (combine . (getModuleName &&& getFunction) . snd )
   where 
-    
     combine (a, (b, c)) = (a, b, c)
     
 
