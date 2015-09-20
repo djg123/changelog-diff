@@ -16,10 +16,6 @@ type FunctionName = String
 type Type = String
 type ModuleName = String
 
-{-data Changelog = Changelog {added :: S.Set FunctionSignature
-                                  ,deleted :: S.Set FunctionSignature
-                                  ,changedType ::  S.Set FunctionSignature}
-                                   deriving Show-}
        
 data Changelog a = Changelog {added :: [FunctionSignature]
                              ,deleted :: [FunctionSignature]
@@ -29,10 +25,6 @@ data Changelog a = Changelog {added :: [FunctionSignature]
 
 
 
-{-compareModules
-  :: FilePath
-     -> FilePath
-     -> IO Changelog-}
 compareModules oldVersion newVersion = do
   [old, new] <- mapM (fmap processResults . getHoogleTags)
                                         [oldVersion, newVersion]
