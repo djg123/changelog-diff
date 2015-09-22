@@ -1,15 +1,18 @@
--- GenChangelog Project
-module Lib
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+module Changelog
     (compareModules
+    ,Changelog(..)
     ) where
 
 import           Control.Applicative (pure, (<$>), (<*>))
-import           Control.Arrow       ((&&&), (***))
-import           Data.List           (nub)
-import qualified Data.Map            as M
-import qualified Data.Set            as S
+import           Control.Arrow ((&&&), (***))
+import           Data.List (nub)
+import qualified Data.Map as M
+import           Data.Monoid ((<>), Monoid)
+import qualified Data.Set as S
 import           Debug.Trace
-import qualified Hoogle              as H
+import           Debug.Trace
+import qualified Hoogle as H
 
 type FunctionSignature = (ModuleName, FunctionName, Type)
 type FunctionName = String
@@ -17,14 +20,55 @@ type Type = String
 type ModuleName = String
 
 
-data Changelog = Changelog {added :: [FunctionSignature]
-                             ,deleted :: [FunctionSignature]
-                             ,changedType :: [(FunctionSignature,
-                                               FunctionSignature)]
-                             ,unchanged :: [FunctionSignature]} deriving Show
+data Changelog = Changelog {clAdded :: [FunctionSignature]
+                           ,clDeleted :: [FunctionSignature]
+                           ,clChangedType :: [(FunctionSignature,
+                                                   FunctionSignature)]
+                           ,clUnchanged :: [FunctionSignature]} deriving (Show)
+                           
+instance Monoid Changelog where
+  mempty = Changelog {clAdded = []
+                     ,clDeleted = []
+                     ,clChangedType = []
+                     ,clUnchanged = []}
+    
+  mappend cl1 cl2 = Changelog {clAdded = clAdded cl1 <> clAdded cl2
+                              ,clDeleted = clDeleted cl1 <> clDeleted cl2
+                              ,clChangedType = clChangedType cl1 <> clChangedType cl2
+                              ,clUnchanged = clUnchanged cl1 <> clUnchanged cl2}
+
+
+insertAdded v cl = cl {clAdded = v : clAdded cl}
+insertDeleted v cl = cl {clDeleted = v : clDeleted cl}                      
+insertChangedType v cl = cl {clChangedType = v : clChangedType cl}
+insertUnchanged v cl = cl {clUnchanged = v : clUnchanged cl}
 
 
 
+groupByModule :: Changelog -> M.Map ModuleName Changelog
+groupByModule (Changelog 
+              {clAdded = added
+              ,clDeleted = deleted
+              ,clChangedType = changedType
+              ,clUnchanged = unchanged}) = foldr (M.unionWith (<>)) mempty [added', deleted', unchanged', changedType']
+  where 
+    added' = foldr (step insertAdded) M.empty added
+    deleted' = foldr (step insertDeleted) M.empty deleted
+    unchanged' = foldr (step insertUnchanged) M.empty unchanged
+    changedType' = foldr stepChangedType M.empty changedType
+
+    step f tup@(m, _, _) z = case m `M.member` z of
+                               False -> M.insert m (f tup mempty) z
+                               True -> M.adjust (\cl -> cl {clAdded = tup : clAdded cl}) m z
+
+
+
+    stepChangedType tup@((m, _, _), _) z = case m `M.member` z of
+                                             False -> M.insert m (insertChangedType tup mempty) z
+                                             True -> M.adjust (insertChangedType tup) m z 
+type Q a = ((a, a, a), (a,a,a))
+
+compareModules :: FilePath -> FilePath -> IO Changelog
 compareModules oldVersion newVersion = do
   [old, new] <- mapM (fmap processResults . getHoogleTags)
                                         [oldVersion, newVersion]

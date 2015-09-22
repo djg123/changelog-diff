@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
+  exposed-modules:     Changelog, FormatConsole
   build-depends:       base >= 4.7 && < 5
                      , containers >= 0.5.6.2
                      , hoogle
