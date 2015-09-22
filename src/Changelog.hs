@@ -2,6 +2,7 @@
 module Changelog
     (compareModules
     ,Changelog(..)
+    ,groupByModule
     ) where
 
 import           Control.Applicative (pure, (<$>), (<*>))
