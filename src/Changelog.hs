@@ -12,8 +12,8 @@ import qualified Data.Map as M
 import           Data.Monoid ((<>), Monoid)
 import qualified Data.Set as S
 import           Debug.Trace
-import           Debug.Trace
 import qualified Hoogle as H
+import           Test.QuickCheck (Arbitrary(..))
 
 type FunctionSignature = (ModuleName, FunctionName, Type)
 type FunctionName = String
@@ -37,11 +37,27 @@ instance Monoid Changelog where
                               ,clDeleted = clDeleted cl1 <> clDeleted cl2
                               ,clChangedType = clChangedType cl1 <> clChangedType cl2
                               ,clUnchanged = clUnchanged cl1 <> clUnchanged cl2}
+    
+instance Arbitrary Changelog where
+  arbitrary = Changelog 
+                <$> arbitrary 
+                <*> arbitrary 
+                <*> arbitrary 
+                <*> arbitrary
 
 
+insertAdded :: FunctionSignature -> Changelog -> Changelog
 insertAdded v cl = cl {clAdded = v : clAdded cl}
+                      
+insertDeleted :: FunctionSignature -> Changelog -> Changelog
 insertDeleted v cl = cl {clDeleted = v : clDeleted cl}                      
+              
+insertChangedType
+  :: (FunctionSignature, FunctionSignature) -> Changelog -> Changelog
 insertChangedType v cl = cl {clChangedType = v : clChangedType cl}
+                            
+                            
+insertUnchanged :: FunctionSignature -> Changelog -> Changelog
 insertUnchanged v cl = cl {clUnchanged = v : clUnchanged cl}
 
 
@@ -60,7 +76,7 @@ groupByModule (Changelog
 
     step f tup@(m, _, _) z = case m `M.member` z of
                                False -> M.insert m (f tup mempty) z
-                               True -> M.adjust (\cl -> cl {clAdded = tup : clAdded cl}) m z
+                               True -> M.adjust (f tup) m z
 
 
 
