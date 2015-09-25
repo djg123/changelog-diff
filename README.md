@@ -1,5 +1,5 @@
 # changelog-diff
-Generates changelogs of functions between Haskell packages.
+Generates changelogs of functions between two different versions of Haskell packages.
 ## Usage
 `./changelog-diff-exe packageOldVersion.hoo packageNewVersion.hoo`
 
@@ -82,3 +82,10 @@ Data.Csv.Streaming
 
 
 ```
+
+## Todo:
+
+* Document code for Haddock
+* Create testing suite
+* HTML output support
+* One command to download packages from Hackage and produce a diff
