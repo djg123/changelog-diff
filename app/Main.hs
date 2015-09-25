@@ -16,3 +16,4 @@ main = do
           in do
               cl <- compareModules oldVersion newVersion
               putStrLn $ format cl
+              

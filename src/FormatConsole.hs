@@ -7,21 +7,33 @@ import qualified Data.Map as M
 
 format :: C.Changelog -> String
 format cl = let m = C.groupByModule cl
-            in unlines $ map (\(mN, cl') ->  mN    
-                                          ++ (clPerModule cl'))
-                             (M.toAscList m)
+                spacer = "\n\n"
+            in intercalate spacer $ 
+               map (\(mN, cl') ->  mN  
+                                ++ (clPerModule cl')
+                                ++ spacer)
+                       (M.toAscList m)
 
 clPerModule :: C.Changelog -> String
-clPerModule cl = sep ++ (intercalate sep $ map sigToString (C.clAdded cl)
-                                                         ++ map sigToString (C.clDeleted cl)
-                                                         ++ map changedTypeSigToString (C.clChangedType cl))
+clPerModule cl = sep ++ intercalate (sep ++ sep) 
+                                    (filter (not . null) 
+                                            [added
+                                            ,deleted
+                                            ,changedType])
   where 
+    added = inter $ map (("+ " ++) . sigToString) (C.clAdded cl)
+    deleted = inter $ map (("- " ++) . sigToString) (C.clDeleted cl)
+    changedType = inter $ map changedTypeSigToString (C.clChangedType cl)
+
     sigToString (_, fN, tN) = fN ++ " :: " ++ tN
     changedTypeSigToString ((_, fN, tN),
-                            (_, _, tN')) = intercalate sep [fN ++ " :: " ++ tN'
-                                                           ,fN ++ " :: " ++ tN']
+                            (_, _, tN')) = let topLine = "~ " ++ fN ++ " :: " ++ tN'
+                                           in  inter [topLine
+                                                     ,(replicate (length topLine - length tN') ' ')
+                                                     ++ tN]
 
-    sep = "\n  "
+    sep = "\n    "
+    inter = intercalate sep
 
 
 
