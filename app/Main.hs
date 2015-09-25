@@ -1,7 +1,8 @@
 module Main where
 
-import           Lib
+import           Changelog
 import           System.Environment
+import FormatConsole (format)
 
 main :: IO ()
 main = do
@@ -13,5 +14,6 @@ main = do
                            ++ " [old hoogle db path] [new hoogle db path]\n")
      else let [oldVersion, newVersion] = args
           in do
-              cl <- fmap show $  compareModules oldVersion newVersion
-              putStrLn $ show cl
+              cl <- compareModules oldVersion newVersion
+              putStrLn $ format cl
+              
