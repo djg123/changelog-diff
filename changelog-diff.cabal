@@ -19,6 +19,7 @@ library
   build-depends:       QuickCheck >= 2.8.1
                      , base >= 4.7 && < 5
                      , containers >= 0.5.6.2
+                     , extra >= 1.4.1
                      , hoogle
   default-language:    Haskell2010
 
@@ -30,6 +31,7 @@ executable changelog-diff-exe
                      , base
                      , changelog-diff
                      , containers >= 0.5.6.2
+                     , extra >= 1.4.1
                      , hoogle
   default-language:    Haskell2010
 
@@ -41,6 +43,7 @@ test-suite changelog-diff-test
                      , base
                      , changelog-diff
                      , containers >= 0.5.6.2
+                     , extra >= 1.4.1
                      , hoogle
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
