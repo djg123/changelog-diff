@@ -42,14 +42,10 @@ instance Arbitrary Changelog where
 
 
     (toChangeType, unchanged) <- sublistOfWithRemainder notDeleted -- Entries not deleted, but to
-                                                                   -- have
+                                                                   -- have there types changed
 
-             -- their types changed
-    changedType <- mapM
-                     (\(m, n, t) ->
-                        ( nonNullString) >>= \t' ->
-                          return (m, n, t'))
-                     toChangeType
+
+    changedType <- mapM (\(m, n, t) -> nonNullString >>= \t' -> return (m, n, t')) toChangeType
     added <- makeFunctionAndTypeList modules -- List of random functions and types only to be "added"
 
     return
@@ -59,6 +55,7 @@ instance Arbitrary Changelog where
         , clChangedType = toChangeType `zip` changedType
         , clUnchanged = unchanged
         }
+
     where
       nonNullString = head <$> arbitraryStringsGTZero 1 :: T.Gen String
 
@@ -72,7 +69,8 @@ makeFunctionAndTypeList mns = fmap (zipJoin (cycle mns) . map (\(_, b, c) -> (b,
 -- | Generate function signature lists
 makeFunctionSignatureList :: T.Gen [FunctionSignature]
 makeFunctionSignatureList = do
-  fc <- T.choose (1, 50) :: T.Gen Int
+-- A module will contain fc functions, mc modules and tc types.
+  fc <- T.choose (1, 3) :: T.Gen Int
   mc <- T.choose (1, fc)
   tc <- T.choose (1, fc)
 
@@ -81,10 +79,10 @@ makeFunctionSignatureList = do
   ts <- arbitraryStringsGTZero tc
 
   return (distribute ms fs ts)
-    
+
 arbitraryStringsGTZero
   :: Int -> T.Gen [String]
-arbitraryStringsGTZero n = replicateM n $ T.suchThat arbitrary (\s -> not (null s) && all isAlpha s) 
+arbitraryStringsGTZero n = replicateM n $ T.suchThat arbitrary (\s -> not (null s) && all isAlpha s)
 
 -- | Make a sublist, but also return all the elements of the original
 -- | list that were not in the sublist.
@@ -96,8 +94,14 @@ sublistOfWithRemainder xs = saveRemainder <$> T.sublistOf xs
         diff = filter (not . flip elem ys) xs
 
 -- | Assign functions to modules and types
+-- TODO: "Randomly" assign types to functions,
+-- then "randomly" assign x *unique* (Function, Type) pairs
+-- to each module. We want to simulate the situation where
+-- different modules can have functions of the same name and type
+-- but we don't want it so duplicate (Function, Type) pairs can be
+-- in the same module.
 distribute :: [ModuleName] -> [FunctionName] -> [Type] -> [FunctionSignature]
-distribute ms fs ts = [(mn, fn, tn) | fn <- fs, mn <- ms, tn <- ts]
+distribute ms fs ts = zip3 (cycle ms) fs (cycle ts)
 
 
 insertAdded :: FunctionSignature -> Changelog -> Changelog
