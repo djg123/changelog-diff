@@ -1,20 +1,14 @@
-module Changelog (compareModules, Changelog(..), groupByModule) where
+module Changelog (compareModules, Changelog(..), groupByModule
+                 ,                               buildChangelog') where
 
 import           Control.Monad (replicateM)
-import           Data.Char (isAlpha)
 import           Data.List (nub)
 import qualified Data.Map as M
 import           Data.Monoid ((<>))
 import qualified Data.Set as S
-import           Data.Tuple.Extra (both, (&&&), (***), fst3)
+import           Data.Tuple.Extra (both, (&&&), (***))
 import qualified Hoogle as H
-import           Test.QuickCheck (Arbitrary(..))
-import qualified Test.QuickCheck as T
-
-type FunctionSignature = (ModuleName, FunctionName, Type)
-type FunctionName = String
-type Type = String
-type ModuleName = String
+import           Types (FunctionSignature, ModuleName, Type, FunctionName)
 
 
 data Changelog = Changelog
@@ -22,7 +16,7 @@ data Changelog = Changelog
   ,clDeleted     :: [FunctionSignature]
   ,clChangedType :: [(FunctionSignature, FunctionSignature)]
   ,clUnchanged   :: [FunctionSignature]}
-  deriving Show
+  deriving (Show, Eq)
 
 instance Monoid Changelog where
   mempty = Changelog { clAdded = [], clDeleted = [], clChangedType = [], clUnchanged = [] }
@@ -32,76 +26,6 @@ instance Monoid Changelog where
     , clChangedType = clChangedType cl1 <> clChangedType cl2
     , clUnchanged = clUnchanged cl1 <> clUnchanged cl2
     }
-
-instance Arbitrary Changelog where
-  arbitrary = do
-    oldList <- makeFunctionSignatureList
-    let modules = map fst3 oldList
-    (deleted, notDeleted) <- sublistOfWithRemainder oldList -- Entries from oldList that were
-                                                            -- "removed" in later
-
-
-    (toChangeType, unchanged) <- sublistOfWithRemainder notDeleted -- Entries not deleted, but to
-                                                                   -- have there types changed
-
-
-    changedType <- mapM (\(m, n, t) -> nonNullString >>= \t' -> return (m, n, t')) toChangeType
-    added <- makeFunctionAndTypeList modules -- List of random functions and types only to be "added"
-
-    return
-      Changelog
-        { clAdded = added
-        , clDeleted = deleted
-        , clChangedType = toChangeType `zip` changedType
-        , clUnchanged = unchanged
-        }
-
-    where
-      nonNullString = head <$> arbitraryStringsGTZero 1 :: T.Gen String
-
--- | Like makeFunctionSignatureList, but with existing modules.
-makeFunctionAndTypeList :: [ModuleName] -> T.Gen [FunctionSignature]
-makeFunctionAndTypeList mns = fmap (zipJoin (cycle mns) . map (\(_, b, c) -> (b, c)))
-                                makeFunctionSignatureList
-  where
-    xs `zipJoin` ys = map (\(a, (b, c)) -> (a, b, c)) (xs `zip` ys)
-
--- | Generate function signature lists
-makeFunctionSignatureList :: T.Gen [FunctionSignature]
-makeFunctionSignatureList = do
--- A module will contain fc functions, mc modules and tc types.
-  fc <- T.choose (1, 3) :: T.Gen Int
-  mc <- T.choose (1, fc)
-  tc <- T.choose (1, fc)
-
-  fs <- arbitraryStringsGTZero fc
-  ms <- arbitraryStringsGTZero mc
-  ts <- arbitraryStringsGTZero tc
-
-  return (distribute ms fs ts)
-
-arbitraryStringsGTZero
-  :: Int -> T.Gen [String]
-arbitraryStringsGTZero n = replicateM n $ T.suchThat arbitrary (\s -> not (null s) && all isAlpha s)
-
--- | Make a sublist, but also return all the elements of the original
--- | list that were not in the sublist.
-sublistOfWithRemainder :: Eq a => [a] -> T.Gen ([a], [a])
-sublistOfWithRemainder xs = saveRemainder <$> T.sublistOf xs
-  where
-    saveRemainder ys = (ys, diff)
-      where
-        diff = filter (not . flip elem ys) xs
-
--- | Assign functions to modules and types
--- TODO: "Randomly" assign types to functions,
--- then "randomly" assign x *unique* (Function, Type) pairs
--- to each module. We want to simulate the situation where
--- different modules can have functions of the same name and type
--- but we don't want it so duplicate (Function, Type) pairs can be
--- in the same module.
-distribute :: [ModuleName] -> [FunctionName] -> [Type] -> [FunctionSignature]
-distribute ms fs ts = zip3 (cycle ms) fs (cycle ts)
 
 
 insertAdded :: FunctionSignature -> Changelog -> Changelog
