@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
+import           Debug.Trace
 import           Changelog
 import           Control.Monad
 import           Control.Monad.Loops (iterateUntilM)
@@ -29,6 +30,16 @@ prop_correctChangelog (Changelists { oldList = old, newList = new, changeLog = m
   where
     newCLog = buildChangelog' new old
 
+test_buildModules = assertEqual (buildChangelog' new old) mempty {clChangedType = [(("Mu", "k", "v"), ("Mu", "k", "dJIX"))]}
+  where
+    new = [("Mu", "k", "dJIX")]
+    old = [("Mu", "k", "v")]
+
+test_buildModulesEmptyOldList = assertEqual (buildChangelog' new old) mempty {clAdded = [("N", "L\219", "a\231")]}
+  where
+    old = []
+    new = [("N", "L\219", "a\231")]
+
 instance Arbitrary Changelists where
   arbitrary = do
     l <- makeFunctionSignatureList
@@ -40,9 +51,10 @@ instance Arbitrary Changelists where
     changedType <- combineWithNewTypes toChangeType
     let new = unchanged ++ added ++ map snd changedType
     let manualCLog = Changelog {clAdded = added, clDeleted = deleted, clChangedType = changedType, clUnchanged = unchanged}
+    traceShow manualCLog (return ())
     return
       Changelists
-        { oldList = notAddedOrDeleted
+        { oldList = notAdded
         , newList = new
         , changeLog = manualCLog
         }
@@ -98,7 +110,7 @@ makeFunctionAndTypeList mns = fmap (zipJoin (cycle mns) . map (\(_, b, c) -> (b,
 makeFunctionSignatureList :: T.Gen [FunctionSignature]
 makeFunctionSignatureList = do
 -- A module will contain fc functions, mc modules and tc types.
-  fc <- T.choose (1, 3) :: T.Gen Int
+  fc <- T.choose (1, 10) :: T.Gen Int
   mc <- T.choose (1, fc)
   tc <- T.choose (1, fc)
 
