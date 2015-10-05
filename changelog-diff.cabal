@@ -15,9 +15,12 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Changelog, FormatConsole
+  exposed-modules:     Changelog, FormatConsole, FormatHTML
   build-depends:       QuickCheck >= 2.8.1
                      , base >= 4.7 && < 5
+                     , blaze-html
+                     , blaze-markup >= 0.7.0.2
+                     , bytestring >= 0.10.6.0
                      , containers >= 0.5.6.2
                      , hoogle
   default-language:    Haskell2010
@@ -28,6 +31,9 @@ executable changelog-diff-exe
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       QuickCheck >= 2.8.1
                      , base
+                     , blaze-html
+                     , blaze-markup >= 0.7.0.2
+                     , bytestring >= 0.10.6.0
                      , changelog-diff
                      , containers >= 0.5.6.2
                      , hoogle
@@ -39,6 +45,9 @@ test-suite changelog-diff-test
   main-is:             Spec.hs
   build-depends:       QuickCheck >= 2.8.1
                      , base
+                     , blaze-html
+                     , blaze-markup >= 0.7.0.2
+                     , bytestring >= 0.10.6.0
                      , changelog-diff
                      , containers >= 0.5.6.2
                      , hoogle

@@ -3,6 +3,7 @@ module Changelog
     (compareModules
     ,Changelog(..)
     ,groupByModule
+    ,FunctionSignature
     ) where
 
 import           Control.Applicative (pure, (<$>), (<*>))
