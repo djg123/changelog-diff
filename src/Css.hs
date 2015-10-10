@@ -71,6 +71,11 @@ td, th {
   padding: 0.25rem;
 }
 
+th {
+  font-weight: bold;
+  font-size: 24px;
+}
+
 .functionName {
   padding: 0.25rem;
   text-align: right;

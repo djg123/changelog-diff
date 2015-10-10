@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module FormatHTML (format) where
 
+import Data.Monoid ((<>))
 import qualified Changelog as C
 import           Control.Monad (forM_, replicateM_)
-import           Data.ByteString.Lazy hiding (cycle, zip)
+import qualified Data.ByteString.Lazy as L
 import qualified Data.Map as M
 import           Text.Blaze (Markup)
 import           Text.Blaze.Html.Renderer.Utf8 (renderHtml)
@@ -11,7 +12,7 @@ import           Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
-format :: FilePath -> C.Changelog -> ByteString
+format :: FilePath -> C.Changelog -> L.ByteString
 format cssPath cl = renderHtml $
   let m = C.groupByModule cl
   in H.docTypeHtml $ do
@@ -20,34 +21,34 @@ format cssPath cl = renderHtml $
       H.link ! A.rel "stylesheet" ! A.type_ "text/css" ! A.href (H.stringValue cssPath)
     H.body $ do
       H.h1 "Changelog"
-      H.table $ mapM_ buildHtml (M.toList m)
+      H.table $ mapM_ (runMarkup . buildHtml) (M.toList m)
 
-       
+runMarkup :: [H.Html] -> Markup
+runMarkup = foldr1 (>>) . zipWith ($) (cycle [evenEntry, oddEntry])
 
-buildHtml
-  :: H.ToMarkup a => (a, C.Changelog) -> Markup
-buildHtml (m, cl) = do
-  H.tr (H.th ! A.colspan (H.stringValue $ show cols) $ H.h2 (H.toHtml m))
+buildHtml :: (C.ModuleName, C.Changelog) -> [H.Html]
+buildHtml (m, cl) =
+  [H.tr (H.th ! A.colspan (H.stringValue $ show cols) $ H.h2 (H.toHtml m))] ++
 
-  forWithParityM_ (C.clAdded cl) $ \((_, f, t), parityF) ->
-    parityF $ H.tr (td "+" >> td f >> td "::" >> td t )
-  blankRow
+  map (\(_, f, t) -> H.tr (td "+" >> td f >> td "::" >> td t)) (C.clAdded cl) ++
+  
 
-  forWithParityM_ (C.clDeleted cl) $ \((_, f, t), parityF) ->
-    parityF $ H.tr (td "-" >> td f >> td "::" >> td t )
-  blankRow
+  map (\(_, f, t) -> H.tr (td "-" >> td f >> td "::" >> td t)) (C.clDeleted cl) ++
+ 
 
-  forWithParityM_ (C.clChangedType cl) $ \(((_, f, t), (_, _, t')), parityF) -> do
-    parityF $ H.tr (H.td "~" >> td f >> td "::" >> td t')
-    parityF $ H.tr (emptyCell >> emptyCell >> emptyCell >> td t)
-  blankRow
-  blankRow
+  map
+    (\((_, f, t), (_, _, t')) -> H.tr (H.td "~" >> td f >> td "::" >> td t') <>
+                                 H.tr (emptyCell >> emptyCell >> emptyCell >> td t))
+    (C.clChangedType cl) 
 
   where
-    forWithParityM_ xs = forM_ (xs `zip` cycle [evenEntry, oddEntry])
-    oddEntry = (! A.class_ "odd-entry")
-    evenEntry = (! A.class_ "even-entry")
     cols = 4
-    blankRow = H.tr (replicateM_ cols emptyCell)
+    blankRow = H.tr (replicateM_ cols emptyCell) ! A.rowspan "2"
     emptyCell = td ""
-    td = H.td . H.toHtml
+    td = H.td . H.toHtml :: String -> H.Html
+
+oddEntry :: H.Html -> H.Html
+oddEntry = (! A.class_ "odd-entry")
+
+evenEntry :: H.Html -> H.Html
+evenEntry = (! A.class_ "even-entry")

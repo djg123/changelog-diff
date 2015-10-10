@@ -6,6 +6,7 @@ module Changelog
     ,FunctionSignature
     ,FunctionName
     ,Type
+    ,ModuleName
     ) where
 
 import           Control.Applicative (pure, (<$>), (<*>))
