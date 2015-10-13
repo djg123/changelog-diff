@@ -1,4 +1,4 @@
-module Changelog (compareModules, Changelog(..), groupByModule, ModuleName) where
+module Changelog (compareModules, Changelog(..), groupByModule) where
 
 import           Control.Arrow ((&&&), (***))
 import           Data.List (nub)
@@ -6,12 +6,7 @@ import qualified Data.Map as M
 import           Data.Monoid ((<>))
 import qualified Data.Set as S
 import qualified Hoogle as H
-
-type FunctionSignature = (ModuleName, FunctionName, Type)
-type FunctionName = String
-type Type = String
-type ModuleName = String
-
+import Types
 
 data Changelog =
        Changelog

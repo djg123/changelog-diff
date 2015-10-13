@@ -1,16 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 module FormatHTML (format) where
 
-import Data.Monoid ((<>))
 import qualified Changelog as C
 import           Control.Monad (forM_, replicateM_)
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Map as M
+import           Data.Monoid ((<>))
 import           Text.Blaze (Markup)
 import           Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 import           Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
+import qualified Types as T
 
 format :: FilePath -> C.Changelog -> L.ByteString
 format cssPath cl = renderHtml $
@@ -26,7 +27,7 @@ format cssPath cl = renderHtml $
 runMarkup :: [H.Html] -> Markup
 runMarkup = foldr1 (>>) . zipWith ($) (cycle [evenEntry, oddEntry])
 
-buildHtml :: (C.ModuleName, C.Changelog) -> [H.Html]
+buildHtml :: (T.ModuleName, C.Changelog) -> [H.Html]
 buildHtml (m, cl) =
   [H.tr (H.th ! A.colspan (H.stringValue $ show cols) $ H.h2 (H.toHtml m))] ++
 
