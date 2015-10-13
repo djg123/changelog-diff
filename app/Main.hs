@@ -31,3 +31,5 @@ writeHtml outputPath cl = do
   L.writeFile (outputPath </> "out.html") (format cssPath cl) 
   writeCss (outputPath </> cssPath)
 
+
+

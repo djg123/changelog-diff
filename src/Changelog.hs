@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Changelog
     (compareModules
     ,Changelog(..)
@@ -11,13 +9,7 @@ module Changelog
     ) where
 
 import           Control.Applicative (pure, (<$>), (<*>))
-import           Control.Arrow ((&&&), (***))
-=======
-module Changelog (compareModules, Changelog(..), groupByModule
-                 ,                               buildChangelog') where
-
 import           Control.Monad (replicateM)
->>>>>>> cleanup
 import           Data.List (nub)
 import qualified Data.Map as M
 import           Data.Monoid ((<>))
@@ -34,34 +26,6 @@ data Changelog = Changelog
   ,clUnchanged   :: [FunctionSignature]}
   deriving (Show, Eq)
 
-<<<<<<< HEAD
-data Changelog =
-       Changelog
-         { clAdded :: [FunctionSignature]
-         , clDeleted :: [FunctionSignature]
-         , clChangedType :: [(FunctionSignature, FunctionSignature)]
-         , clUnchanged :: [FunctionSignature]
-         }
-  deriving Show
-
-instance Monoid Changelog where
-  mempty = Changelog {clAdded = []
-                     ,clDeleted = []
-                     ,clChangedType = []
-                     ,clUnchanged = []}
-
-  mappend cl1 cl2 = Changelog {clAdded = clAdded cl1 <> clAdded cl2
-                              ,clDeleted = clDeleted cl1 <> clDeleted cl2
-                              ,clChangedType = clChangedType cl1 <> clChangedType cl2
-                              ,clUnchanged = clUnchanged cl1 <> clUnchanged cl2}
-
-instance Arbitrary Changelog where
-  arbitrary = Changelog 
-                <$> arbitrary 
-                <*> arbitrary 
-                <*> arbitrary 
-                <*> arbitrary
-=======
 instance Monoid Changelog where
   mempty = Changelog { clAdded = [], clDeleted = [], clChangedType = [], clUnchanged = [] }
   mappend cl1 cl2 = Changelog
@@ -70,44 +34,27 @@ instance Monoid Changelog where
     , clChangedType = clChangedType cl1 <> clChangedType cl2
     , clUnchanged = clUnchanged cl1 <> clUnchanged cl2
     }
->>>>>>> cleanup
-
 
 insertAdded :: FunctionSignature -> Changelog -> Changelog
 insertAdded v cl = cl {clAdded = v : clAdded cl}
 
 insertDeleted :: FunctionSignature -> Changelog -> Changelog
-<<<<<<< HEAD
-insertDeleted v cl = cl {clDeleted = v : clDeleted cl}                      
-=======
 insertDeleted v cl = cl {clDeleted = v : clDeleted cl}
->>>>>>> cleanup
 
 insertChangedType
   :: (FunctionSignature, FunctionSignature) -> Changelog -> Changelog
 insertChangedType v cl = cl {clChangedType = v : clChangedType cl}
 
-<<<<<<< HEAD
-
-=======
->>>>>>> cleanup
 insertUnchanged :: FunctionSignature -> Changelog -> Changelog
 insertUnchanged v cl = cl {clUnchanged = v : clUnchanged cl}
 
 groupByModule :: Changelog -> M.Map ModuleName Changelog
 groupByModule (Changelog
-<<<<<<< HEAD
-              {clAdded = added
-              ,clDeleted = deleted
-              ,clChangedType = changedType
-              ,clUnchanged = unchanged}) = foldr (M.unionWith (<>)) mempty [added', deleted', unchanged', changedType']
-=======
                  { clAdded = added
                  , clDeleted = deleted
                  , clChangedType = changedType
                  , clUnchanged = unchanged
                  }) = foldr (M.unionWith (<>)) mempty [added', deleted', unchanged', changedType']
->>>>>>> cleanup
   where
     added' = foldr (step insertAdded) M.empty added
     deleted' = foldr (step insertDeleted) M.empty deleted
