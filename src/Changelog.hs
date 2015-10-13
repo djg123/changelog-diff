@@ -1,31 +1,26 @@
-module Changelog
-    (compareModules
-    ,Changelog(..)
-    ,groupByModule
-    ,FunctionSignature
-    ,FunctionName
-    ,Type
-    ,ModuleName
-    ) where
+module Changelog (compareModules, Changelog(..), groupByModule, ModuleName) where
 
-import           Control.Applicative (pure, (<$>), (<*>))
-import           Control.Monad (replicateM)
+import           Control.Arrow ((&&&), (***))
 import           Data.List (nub)
 import qualified Data.Map as M
 import           Data.Monoid ((<>))
 import qualified Data.Set as S
-import           Data.Tuple.Extra (both, (&&&), (***))
 import qualified Hoogle as H
-import           Types (FunctionSignature, ModuleName, Type, FunctionName)
+
+type FunctionSignature = (ModuleName, FunctionName, Type)
+type FunctionName = String
+type Type = String
+type ModuleName = String
 
 
-data Changelog = Changelog
-  {clAdded       :: [FunctionSignature]
-  ,clDeleted     :: [FunctionSignature]
-  ,clChangedType :: [(FunctionSignature, FunctionSignature)]
-  ,clUnchanged   :: [FunctionSignature]}
-  deriving (Show, Eq)
-
+data Changelog =
+       Changelog
+         { clAdded       :: [FunctionSignature]
+         , clDeleted     :: [FunctionSignature]
+         , clChangedType :: [(FunctionSignature, FunctionSignature)]
+         , clUnchanged   :: [FunctionSignature]
+         }
+  deriving Show
 instance Monoid Changelog where
   mempty = Changelog { clAdded = [], clDeleted = [], clChangedType = [], clUnchanged = [] }
   mappend cl1 cl2 = Changelog
@@ -34,6 +29,7 @@ instance Monoid Changelog where
     , clChangedType = clChangedType cl1 <> clChangedType cl2
     , clUnchanged = clUnchanged cl1 <> clUnchanged cl2
     }
+
 
 insertAdded :: FunctionSignature -> Changelog -> Changelog
 insertAdded v cl = cl {clAdded = v : clAdded cl}
@@ -45,8 +41,11 @@ insertChangedType
   :: (FunctionSignature, FunctionSignature) -> Changelog -> Changelog
 insertChangedType v cl = cl {clChangedType = v : clChangedType cl}
 
+
 insertUnchanged :: FunctionSignature -> Changelog -> Changelog
 insertUnchanged v cl = cl {clUnchanged = v : clUnchanged cl}
+
+
 
 groupByModule :: Changelog -> M.Map ModuleName Changelog
 groupByModule (Changelog
@@ -61,19 +60,22 @@ groupByModule (Changelog
     unchanged' = foldr (step insertUnchanged) M.empty unchanged
     changedType' = foldr stepChangedType M.empty changedType
 
-    step f tup@(m, _, _) z =
-      if m `M.member` z
-        then M.insert m (f tup mempty) z
-        else M.adjust (f tup) m z
+    step f tup@(m, _, _) z = if m `M.member` z
+                               then M.adjust (f tup) m z
+                               else M.insert m (f tup mempty) z
 
-    stepChangedType tup@((m, _, _), _) z = if m `M.member` z
-                                             then M.insert m (insertChangedType tup mempty) z
-                                             else M.adjust (insertChangedType tup) m z
+
+
+    stepChangedType tup@((m, _, _), _) z =
+      if m `M.member` z
+        then M.adjust (insertChangedType tup) m z
+        else M.insert m (insertChangedType tup mempty) z
 
 compareModules :: FilePath -> FilePath -> IO Changelog
 compareModules oldVersion newVersion = do
-  [old, new] <- mapM (fmap processResults . getHoogleTags) [oldVersion, newVersion]
-  return $ buildChangelog' new old
+  [oldProcessed, newProcessed] <- mapM (fmap processResults . getHoogleTags)
+                                    [oldVersion, newVersion]
+  return $ buildChangelog' newProcessed oldProcessed
 
 data FunctionStatus a = Deleted a
                       | ChangedType { old :: a, new :: a }
@@ -83,40 +85,41 @@ data FunctionStatus a = Deleted a
 
 
 
-buildChangelog'
-  :: [(ModuleName, FunctionName, Type)]
-     -> [(ModuleName, FunctionName, Type)] -> Changelog
-buildChangelog' new old = Changelog added' deleted' (nub changeType') (nub unchanged')
+buildChangelog' new old = Changelog added' deleted'
+                                           (nub changeType')
+                                           (nub unchanged')
   where
-    (added', deleted', changeType', unchanged') = foldr step ([], [], [], []) (oldInNew ++ newInOld)
+    (added', deleted', changeType', unchanged') = foldr step ([], [], [], [])
+                                                             (oldInNew ++ newInOld)
 
-    step x (a, d, c, u) =
-      case x of
-        Added v         -> (v : a, d, c, u)
-        Deleted v       -> (a, v : d, c, u)
-        ChangedType o n -> (a, d, (o, n) : c, u)
-        Unchanged v     -> (a, d, c, v : u)
+    step x (a, d, c, u) = case x of
+                            Added v -> (v:a, d, c, u)
+                            Deleted v -> (a, v:d, c, u)
+                            ChangedType o n -> (a, d, (o, n):c, u)
+                            Unchanged v -> (a, d, c, v:u)
 
     oldInNew = do
       sig@(n, m, t) <- old
-      return $
-        case (n, m) `M.lookup` newM of
-          Nothing -> Deleted sig
-          Just typeName -> if typeName == t
-                             then Unchanged sig
-                             else ChangedType { old = sig, new = (n, m, typeName) }
+      return $ case (n, m) `M.lookup` newM of
+                 Nothing -> Deleted sig
+                 Just typeName -> if typeName == t
+                                    then Unchanged sig
+                                    else ChangedType {old = sig,new = (n,m, typeName)}
 
     newInOld = do
       sig@(n, m, t) <- new
-      return $
-        case (n, m) `M.lookup` oldM of
-          Nothing -> Added sig
-          Just typeName -> if typeName == t
-                             then Unchanged sig
-                             else ChangedType { old = (n, m, typeName), new = sig }
+      return $ case (n, m) `M.lookup` oldM of
+               Nothing -> Added sig
+               Just typeName -> if typeName == t
+                                  then Unchanged  sig
+                                  else ChangedType {old = (n,
+                                                           m,
+                                                           typeName),
+                                                    new = sig}
 
-    makeMap = M.fromList . map (\(a, b, c) -> ((a, b), c))
+    makeMap = M.fromList . map (\(a,b,c) -> ((a, b), c))
     [newM, oldM] = map makeMap [new, old]
+
 
 
 processResults :: [(H.Score, H.Result)] ->  [(ModuleName, FunctionName, Type)]
@@ -125,19 +128,18 @@ processResults = map (combine . (getModuleName &&& getFunction) . snd )
     combine (a, (b, c)) = (a, b, c)
 
 
-getFunction :: H.Result -> (FunctionName, Type)
-getFunction = parseSignature . H.self
 
-getModuleName :: H.Result -> String
-getModuleName = snd . (!! 1) . snd . head . H.locations
 
+
+both f = f *** f
+unwrap (H.Tags x) = x
+unwrap x = error $ "Unexpected Tags format: " ++ show x
+split = (head *** H.Tags) . splitAt 2
 parseSignature :: H.TagStr -> (FunctionName, Type)
 parseSignature = both H.showTagText . split . unwrap
-  where
-    split = (head *** H.Tags) . splitAt 2
 
-    unwrap (H.Tags x) = x 
-    unwrap x = error $ "Unexpected Tags format: " ++ show x
+getFunction =  parseSignature . H.self
+getModuleName = snd . (!! 1) . snd . head . H.locations
 
 
 
