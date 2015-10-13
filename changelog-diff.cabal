@@ -15,18 +15,28 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
+<<<<<<< HEAD
   exposed-modules:     Changelog, FormatConsole, FormatHTML, Css
+=======
+  exposed-modules:     Changelog, FormatConsole, Types
+>>>>>>> cleanup
   build-depends:       QuickCheck >= 2.8.1
                      , base >= 4.7 && < 5
                      , blaze-html
                      , blaze-markup >= 0.7.0.2
                      , bytestring >= 0.10.6.0
                      , containers >= 0.5.6.2
+<<<<<<< HEAD
                      , directory >= 1.2.2.0
                      , filepath >= 1.4.0.0
                      , hoogle
                      , shakespeare
                      , text >= 1.2.1.3
+=======
+                     , extra >= 1.4.1
+                     , hoogle
+                     , monad-loops >= 0.4.3
+>>>>>>> cleanup
   default-language:    Haskell2010
 
 executable changelog-diff-exe
@@ -40,29 +50,43 @@ executable changelog-diff-exe
                      , bytestring >= 0.10.6.0
                      , changelog-diff
                      , containers >= 0.5.6.2
+<<<<<<< HEAD
                      , directory >= 1.2.2.0
                      , filepath >= 1.4.0.0
                      , hoogle
                      , shakespeare
                      , text >= 1.2.1.3
+=======
+                     , extra >= 1.4.1
+                     , hoogle
+                     , monad-loops >= 0.4.3
+>>>>>>> cleanup
   default-language:    Haskell2010
 
 test-suite changelog-diff-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
-  build-depends:       QuickCheck >= 2.8.1
+  build-depends:       HTF
+                     , HUnit >= 1.2.5.2
+                     , QuickCheck >= 2.8.1
                      , base
                      , blaze-html
                      , blaze-markup >= 0.7.0.2
                      , bytestring >= 0.10.6.0
                      , changelog-diff
                      , containers >= 0.5.6.2
+<<<<<<< HEAD
                      , directory >= 1.2.2.0
                      , filepath >= 1.4.0.0
                      , hoogle
                      , shakespeare
                      , text >= 1.2.1.3
+=======
+                     , extra >= 1.4.1
+                     , hoogle
+                     , monad-loops >= 0.4.3
+>>>>>>> cleanup
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

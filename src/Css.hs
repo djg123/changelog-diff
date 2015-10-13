@@ -7,7 +7,7 @@ import qualified Data.Text.Lazy.IO as TLIO
 render = undefined
 
 css :: t -> Css
-css = 
+css =
   [lucius|
 /* http://meyerweb.com/eric/tools/css/reset/ 
    v2.0 | 20110126
