@@ -1,4 +1,4 @@
-module Changelog (compareModules, Changelog(..), groupByModule) where
+module Changelog (compareModules, Changelog(..), groupByModule, buildChangelog') where
 
 import           Control.Arrow ((&&&), (***))
 import           Data.List (nub)
@@ -15,7 +15,8 @@ data Changelog =
          , clChangedType :: [(FunctionSignature, FunctionSignature)]
          , clUnchanged   :: [FunctionSignature]
          }
-  deriving Show
+  deriving (Show, Eq)
+
 instance Monoid Changelog where
   mempty = Changelog { clAdded = [], clDeleted = [], clChangedType = [], clUnchanged = [] }
   mappend cl1 cl2 = Changelog
