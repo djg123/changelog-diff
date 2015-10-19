@@ -1,15 +1,9 @@
 module Main where
 
-import           Changelog
-import           Css
-import qualified Data.ByteString.Lazy as L
 import           Data.Maybe (fromMaybe)
-import qualified FormatConsole as C
-import qualified FormatHTML as H
 import           Options.Applicative
-import qualified System.Directory as D
 import           System.Environment
-import           System.FilePath
+import OutputType
 
 data VersionsOptions = VersionsOptions { voPackageName :: String } deriving (Show)
 data RemoteOptions =
@@ -20,19 +14,11 @@ data RemoteOptions =
          } deriving Show
 data LocalOptions = LocalOptions { loOldPath :: FilePath, loNewPath :: FilePath } deriving (Show)
 
-data Command = Versions VersionsOptions OutputType
+data Command = Versions VersionsOptions
              | Remote RemoteOptions OutputType
              | Local LocalOptions OutputType
   deriving (Show)
 
-data OutputType = Html
-                | Console
-  deriving Show
-
-instance Read OutputType where
-  readsPrec _ "html" = [(Html, "")]
-  readsPrec _ "console" = [(Console, "")]
-  readsPrec _ _ = []
 
 htmlConsoleFlag :: Parser OutputType
 htmlConsoleFlag = fromMaybe Html <$> optional (option auto (metavar "Html/Console output"
@@ -43,7 +29,6 @@ versionsOptions = Versions <$> (VersionsOptions <$> argument str
                                                       (metavar "Package name"
                                                        <> help
                                                             "Name of Hackage package to request version numbers for"))
-                           <*> htmlConsoleFlag
 
 remoteOptions :: Parser Command
 remoteOptions = Remote <$> (RemoteOptions <$> argument str (metavar "Package name"
@@ -67,7 +52,18 @@ localOptions = Local <$> (LocalOptions <$> argument str
 
 
 main :: IO ()
-main = execParser opts >>= putStrLn . ("OUTPUT" ++) . show
+main = do
+  command' <- execParser opts
+  case command' of
+    Local (LocalOptions { loOldPath = oldPath, loNewPath = newPath }) outputType -> runLocal
+                                                                                      oldPath
+                                                                                      newPath
+                                                                                      outputType
+    Remote (RemoteOptions package oldVersionNum newVersionNum) outputType -> runRemote
+                                                                               (package ++ oldVersionNum)
+                                                                               (package ++ newVersionNum)
+    Versions (VersionsOptions package) -> runVersions package
+
   where
     opts = info (commands <**> helper) idm
 
@@ -81,12 +77,3 @@ commands = subparser
                       (progDesc
                          "Downloads two versions of the same package from hackage and diffs them."))
               <> command "local" (info localOptions (progDesc "Compares two packages locally.")))
-
-cssPath :: FilePath
-cssPath = "out.css"
-
-writeHtml :: FilePath -> Changelog -> IO ()
-writeHtml outputPath cl = do
-  D.createDirectoryIfMissing True outputPath
-  L.writeFile (outputPath </> "out.html") (H.format cssPath cl)
-  writeCss (outputPath </> cssPath)
