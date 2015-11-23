@@ -19,6 +19,7 @@ clPerModule cl = sep ++ intercalate (sep ++ sep) (filter (not . null) [added, de
     deleted = inter $ map (("- " ++) . sigToString) (C.clDeleted cl)
     changedType = inter $ map changedTypeSigToString (C.clChangedType cl)
 
+    sigToString :: (String, String, String) -> String
     sigToString (_, fN, tN) = fN ++ " :: " ++ tN
     changedTypeSigToString ((_, fN, tN), (_, _, tN')) =
       let topLine = "~ " ++ fN ++ " :: " ++ tN'

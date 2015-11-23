@@ -7,6 +7,8 @@ import           Data.Monoid ((<>))
 import qualified Data.Set as S
 import qualified Hoogle as H
 import Types
+import Debug.Trace
+import System.Directory (getCurrentDirectory)
 
 data Changelog =
        Changelog
@@ -149,4 +151,5 @@ query = either err id (H.parseQuery H.Haskell queryString)
                    ++ " and has thrown error: " ++ show x)
 
 getHoogleTags :: FilePath -> IO [(H.Score, H.Result)]
-getHoogleTags dbPath = H.search <$> H.loadDatabase dbPath <*> pure query
+getHoogleTags dbPath = traceIO ("DB path is: " ++ dbPath) >> getCurrentDirectory >>= \dir -> traceIO ("The current directory is: " ++ dir ++ "\n")
+                       >> H.search <$> H.loadDatabase dbPath <*> pure query
