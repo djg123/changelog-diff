@@ -1,23 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Run (
-    runLocal,
-    runRemote,
-    runRemoteExplicitDir,
-    ) where
+module Run (runLocal, runRemote) where
 
-import qualified Changelog             as C
-import           Control.Monad.Managed (with)
-import           Css                   (writeCss)
-import qualified Data.ByteString.Lazy  as L
-import           Data.Text             (intercalate, pack, split, unpack)
-import qualified FormatConsole         as C
-import qualified FormatHTML            as H
-import           OutputType            (OutputType (..))
-import qualified System.Directory      as D
-import           System.FilePath       ((</>))
-import           Turtle                ((<.>), (<>))
-import qualified Turtle                as T
-import           Turtle.Prelude        ((.&&.), (.||.))
+import Control.Exception (catch, SomeException)
+import qualified Changelog as C
+import Control.Monad.Managed (with)
+import Css (writeCss)
+import qualified Data.ByteString.Lazy as L
+import Data.Text (intercalate, pack, split, unpack)
+import qualified FormatConsole as C
+import qualified FormatHTML as H
+import OutputType (OutputType(..))
+import qualified System.Directory as D
+import System.FilePath ((</>))
+import Turtle ((<.>), (<>))
+import qualified Turtle as T
+import Turtle.Prelude ((.&&.), (.||.))
 
 -- | Name of css file within output directory
 cssPath :: FilePath
@@ -28,15 +25,16 @@ defaultOutputPath :: FilePath
 defaultOutputPath = "out"
 
 -- | Run on existing *.hoo files.
-runLocal ::     FilePath -- ^ Path of earlier version's .hoo output.
-            ->  FilePath -- ^ Path of later version's .hoo output.
-            ->  OutputType -- ^ Type of output (HTML/Console).
-            ->  IO ()
+runLocal
+    :: FilePath -- ^ Path of earlier version's .hoo output.
+    -> FilePath -- ^ Path of later version's .hoo output.
+    -> OutputType -- ^ Type of output (HTML/Console).
+    -> IO ()
 runLocal oldPath newPath type_ = do
-  cl <- C.compareModules oldPath newPath
-  case type_ of
-    Console -> writeConsole cl
-    Html    -> writeHtml defaultOutputPath cl
+    cl <- C.compareModules oldPath newPath
+    case type_ of
+        Console -> writeConsole cl
+        Html -> writeHtml defaultOutputPath cl
 
 
 -- | Calls either writeHtml or writeConsole based on OutputType.
@@ -58,6 +56,7 @@ writeConsole :: C.Changelog -> IO ()
 writeConsole cl = putStrLn (C.format cl)
 
 
+-- | Just print out exit code for now.
 handleExitFailure :: Int -> IO ()
 handleExitFailure n = putStrLn $ "Failed with exit code: " ++ show n 
 
@@ -70,7 +69,8 @@ runRemote :: String -- ^ Old version of package, example: cassava-0.1.0.1
           -> OutputType -- ^ Output to console or write html to disk.
           -> IO ()
 runRemote oldVersion newVersion outputType =
-  with (T.mktempdir "." "") $ \dir -> runRemoteExplicitDir oldVersion newVersion outputType dir
+  with (T.mktempdir "." "") (\dir -> putStrLn "Calling runRemoteExplicitDir" >> runRemoteExplicitDir oldVersion newVersion outputType dir)
+  `catch` \e -> error $ "Failed with: " ++ show (e :: SomeException)
 
 -- | Same as runRemote, but specifies where to save packages to rather than using
 -- a temp directory.
@@ -78,6 +78,7 @@ runRemoteExplicitDir :: String -> String -> OutputType -> T.FilePath -> IO ()
 runRemoteExplicitDir oldVersion newVersion outputType dir =
   do
     T.cd dir
+    putStrLn "Running cabal commands"
     exitCode <- cabalUnpack oldVersion'
                 .&&. cabalUnpack newVersion'
                 .&&. mkHooFile oldVersion'
@@ -87,7 +88,9 @@ runRemoteExplicitDir oldVersion newVersion outputType dir =
     case exitCode of
       T.ExitFailure n -> handleExitFailure n
       T.ExitSuccess -> do
+        putStrLn "Exit Success, running Changelog.compareModules"
         cl <- C.compareModules (oldVersion ++ ".hoo") (newVersion ++ ".hoo")
+        T.cd ".."
         write outputType cl
   where
     hoogleConvert :: T.Text -> IO T.ExitCode

@@ -2,9 +2,34 @@
 module Main where
 
 import Run
-import           Data.Maybe (fromMaybe)
-import           Options.Applicative
-import           OutputType
+import Data.Maybe (fromMaybe)
+import Options.Applicative
+import OutputType
+
+
+main :: IO ()
+main = do
+    command' <- execParser opts
+    case command' of
+        Local (LocalOptions{loOldPath = oldPath, loNewPath = newPath}) outputType ->
+            runLocal oldPath newPath outputType
+        Remote (RemoteOptions package oldVersionNum newVersionNum) outputType ->
+            do putStrLn "Calling runRemote..."
+               runRemote
+                   (package ++ "-" ++ oldVersionNum)
+                   (package ++ "-" ++ newVersionNum)
+                   outputType
+  where
+    opts = info (commands <**> helper) idm
+
+
+commands :: Parser Command
+commands = subparser
+             (command "remote"
+                          (info remoteOptions
+                             (progDesc
+                                  "Downloads two versions of the same package from hackage and diffs them."))
+             <> command "local" (info localOptions (progDesc "Compares two packages locally.")))
 
 data RemoteOptions =
        RemoteOptions
@@ -13,6 +38,7 @@ data RemoteOptions =
          , roNewVersion :: String
          }
   deriving Show
+
 data LocalOptions = LocalOptions { loOldPath :: FilePath, loNewPath :: FilePath }
   deriving Show
 
@@ -22,12 +48,11 @@ data Command = Remote RemoteOptions OutputType
 
 
 htmlConsoleFlag :: Parser OutputType
- 
-
 htmlConsoleFlag =
     fromMaybe Html <$>
     optional
         (option auto (metavar "Html/Console output" <> long "output-type"))
+
 remoteOptions :: Parser Command
 remoteOptions = Remote <$> (RemoteOptions <$> argument str (metavar "Package name"
                                                             <> help "Name of Hackage package")
@@ -48,27 +73,3 @@ localOptions = Local <$> (LocalOptions <$> argument str
                                                    "Path of either package directory or .hoo file for package."))
                      <*> htmlConsoleFlag
 
-
-main :: IO ()
-main = do
-    command' <- execParser opts
-    case command' of
-        Local (LocalOptions{loOldPath = oldPath,loNewPath = newPath}) outputType ->
-            runLocal oldPath newPath outputType
-        Remote (RemoteOptions package oldVersionNum newVersionNum) outputType ->
-            runRemoteExplicitDir
-                (package ++ "-" ++ oldVersionNum)
-                (package ++ "-" ++ newVersionNum)
-                outputType
-                "."
-  where
-    opts = info (commands <**> helper) idm
-
-
-commands :: Parser Command
-commands = subparser
-             (command "remote"
-                          (info remoteOptions
-                             (progDesc
-                                  "Downloads two versions of the same package from hackage and diffs them."))
-             <> command "local" (info localOptions (progDesc "Compares two packages locally.")))
